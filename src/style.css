@@ -1,0 +1,18 @@
+body{margin:0;font-family:system-ui,sans-serif;background:#f6f4ef;color:#222}
+.app{max-width:720px;margin:0 auto;padding:16px}
+header{display:flex;flex-wrap:wrap;gap:12px;align-items:center}
+header h1{margin:0;flex:1 1 100%}
+header p{margin:0;flex:1}
+button{padding:8px 12px;border:0;border-radius:8px;background:#2d5a8a;color:#fff;cursor:pointer}
+.badge{background:#2e7d32;color:#fff;padding:6px 10px;border-radius:8px;font-size:14px}
+.picked{background:#fff8dc;border:1px solid #e6d58a;border-radius:10px;padding:8px 16px;margin:16px 0}
+.picked ul{padding-left:18px;margin:0}
+.tools{position:sticky;top:0;background:#f6f4ef;padding:10px 0;display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+.tools>input{flex:1;min-width:200px;padding:10px;border:1px solid #bbb;border-radius:8px;font-size:16px}
+.songs{list-style:none;padding:0;margin:0}
+.songs li{border-bottom:1px solid #e3e0d8}
+.songs li.on{background:#e6f4ea}
+.songs label{display:flex;gap:10px;align-items:center;padding:10px 6px;cursor:pointer}
+.songs input{width:22px;height:22px;flex:none}
+.num{font-weight:700;min-width:48px;color:#2d5a8a}
+.err{color:#b00020}
