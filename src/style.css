@@ -1,5 +1,8 @@
 body{margin:0;font-family:system-ui,sans-serif;background:#f6f4ef;color:#222}
 .app{max-width:720px;margin:0 auto;padding:16px}
+.tabs{display:flex;gap:8px;margin-bottom:12px}
+.tabs a{padding:8px 14px;border-radius:8px;border:1px solid #bbb;color:#2d5a8a;text-decoration:none;background:#fff}
+.tabs a.active{background:#2d5a8a;color:#fff;border-color:#2d5a8a}
 header{display:flex;flex-wrap:wrap;gap:12px;align-items:center}
 header h1{margin:0;flex:1 1 100%}
 header p{margin:0;flex:1}

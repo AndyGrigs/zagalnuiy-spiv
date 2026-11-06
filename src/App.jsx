@@ -1,42 +1,46 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
-import songs from '../songs.json';
+import { useEffect, useState } from 'react';
+import SongBook from './SongBook.jsx';
+import songsUk from '../songs.json';
+import songsRu from '../songs_ru.json';
 
-const natKey = (n) => {
-  const m = n.match(/^(\d+)(.*)$/);
-  return m ? [parseInt(m[1], 10), m[2]] : [0, n];
+const BOOKS = {
+  uk: {
+    tab: 'Українські',
+    title: 'Загальний спів 🎶',
+    songs: songsUk,
+    locale: 'uk',
+    labels: {
+      count: 'Обрано пісень', singing: 'Співаємо:', download: '⬇ Завантажити список (.txt)',
+      search: 'Пошук за номером або назвою…', sort: 'Сортування', byNumber: 'За номером',
+      byAlphabet: 'За алфавітом', onlyPicked: 'Лише обрані', saveError: 'Не вдалося зберегти',
+      fileTitle: 'Загальний спів',
+    },
+  },
+  ru: {
+    tab: 'Русские',
+    title: 'Общее пение 🎶',
+    songs: songsRu,
+    locale: 'ru',
+    labels: {
+      count: 'Выбрано песен', singing: 'Поём:', download: '⬇ Скачать список (.txt)',
+      search: 'Поиск по номеру или названию…', sort: 'Сортировка', byNumber: 'По номеру',
+      byAlphabet: 'По алфавиту', onlyPicked: 'Только выбранные', saveError: 'Не удалось сохранить',
+      fileTitle: 'Общее пение',
+    },
+  },
 };
-const byNumber = (a, b) => {
-  const [an, as] = natKey(a[0]), [bn, bs] = natKey(b[0]);
-  return an - bn || as.localeCompare(bs, 'uk');
-};
-const stripQuotes = (t) => t.replace(/^[^\p{L}\p{N}]+/u, '');
-const byAlphabet = (a, b) =>
-  stripQuotes(a[1]).localeCompare(stripQuotes(b[1]), 'uk', { sensitivity: 'base' }) || byNumber(a, b);
-const SORTS = { number: byNumber, alphabet: byAlphabet };
-const ALL = Object.entries(songs).sort(byNumber);
+
+const fromHash = () => (location.hash === '#ru' ? 'ru' : 'uk');
 
 export default function App() {
-  const [selected, setSelected] = useState(new Set());
-  const [query, setQuery] = useState('');
-  const [onlyChecked, setOnlyChecked] = useState(false);
-  const [sort, setSort] = useState(() => localStorage.getItem('sort') || 'number');
+  const [page, setPage] = useState(fromHash);
   const [pin, setPin] = useState(() => localStorage.getItem('pin') || '');
   const [isAdmin, setIsAdmin] = useState(false);
-  const [error, setError] = useState('');
-  const saving = useRef(false);
-
-  const load = async () => {
-    if (saving.current) return;
-    try {
-      const r = await fetch('/api/selected');
-      setSelected(new Set(await r.json()));
-    } catch {}
-  };
 
   useEffect(() => {
-    load();
-    const id = setInterval(load, 5000);
-    return () => clearInterval(id);
+    const onHash = () => setPage(fromHash());
+    window.addEventListener('hashchange', onHash);
+    return () => window.removeEventListener('hashchange', onHash);
   }, []);
 
   useEffect(() => {
@@ -47,27 +51,6 @@ export default function App() {
     });
   }, [pin]);
 
-  const toggle = async (id) => {
-    const next = new Set(selected);
-    next.has(id) ? next.delete(id) : next.add(id);
-    setSelected(next);
-    saving.current = true;
-    setError('');
-    try {
-      const r = await fetch('/api/selected', {
-        method: 'PUT',
-        headers: { 'content-type': 'application/json', 'x-admin-pin': pin },
-        body: JSON.stringify([...next]),
-      });
-      if (!r.ok) throw new Error();
-    } catch {
-      setError('Не вдалося зберегти');
-    } finally {
-      saving.current = false;
-      load();
-    }
-  };
-
   const logout = () => {
     localStorage.removeItem('pin');
     setPin('');
@@ -75,79 +58,28 @@ export default function App() {
   };
 
   const login = () => {
-    const p = prompt('PIN для редагування:');
+    const p = prompt('PIN:');
     if (p) { localStorage.setItem('pin', p); setPin(p); }
   };
 
-  const list = useMemo(() => {
-    const q = query.trim().toLowerCase();
-    return ALL.filter(([id, t]) =>
-      (!onlyChecked || selected.has(id)) &&
-      (!q || id.toLowerCase().includes(q) || t.toLowerCase().includes(q)))
-      .sort(SORTS[sort]);
-  }, [query, onlyChecked, selected, sort]);
-
-  const picked = ALL.filter(([id]) => selected.has(id)).sort(SORTS[sort]);
-
-  const download = () => {
-    const date = new Date().toLocaleDateString('uk-UA');
-    const lines = picked.map(([id, t]) => `${id} — ${t}`);
-    const text = `Загальний спів (${date})\r\n\r\n${lines.join('\r\n')}\r\n`;
-    const blob = new Blob(['﻿' + text], { type: 'text/plain;charset=utf-8' });
-    const a = document.createElement('a');
-    a.href = URL.createObjectURL(blob);
-    a.download = `zagalnyi-spiv-${new Date().toISOString().slice(0, 10)}.txt`;
-    a.click();
-    URL.revokeObjectURL(a.href);
-  };
-
-  const changeSort = (e) => {
-    setSort(e.target.value);
-    localStorage.setItem('sort', e.target.value);
-  };
+  const book = BOOKS[page];
 
   return (
     <div className="app">
-      <header>
-        <h1>Загальний спів 🎶</h1>
-        <p>Обрано пісень: <b>{selected.size}</b></p>
-        {isAdmin
-          ? <><span className="badge">Режим редагування</span> <button onClick={logout}>Вийти</button></>
-          : <button onClick={login}>Увійти для редагування</button>}
-      </header>
-
-      {picked.length > 0 && (
-        <section className="picked">
-          <h2>Співаємо:</h2>
-          <ul>{picked.map(([id, t]) => <li key={id}><b>{id}</b> — {t}</li>)}</ul>
-          <button className="dl" onClick={download}>⬇ Завантажити список (.txt)</button>
-        </section>
-      )}
-
-      <div className="tools">
-        <input placeholder="Пошук за номером або назвою…" value={query}
-               onChange={(e) => setQuery(e.target.value)} />
-        <select value={sort} onChange={changeSort} aria-label="Сортування">
-          <option value="number">За номером</option>
-          <option value="alphabet">За алфавітом</option>
-        </select>
-        <label><input type="checkbox" checked={onlyChecked}
-               onChange={(e) => setOnlyChecked(e.target.checked)} /> Лише обрані</label>
-      </div>
-      {error && <p className="err">{error}</p>}
-
-      <ul className="songs">
-        {list.map(([id, t]) => (
-          <li key={id} className={selected.has(id) ? 'on' : ''}>
-            <label>
-              <input type="checkbox" checked={selected.has(id)}
-                     disabled={!isAdmin} onChange={() => toggle(id)} />
-              <span className="num">{id}</span>
-              <span>{t}</span>
-            </label>
-          </li>
+      <nav className="tabs">
+        {Object.entries(BOOKS).map(([key, b]) => (
+          <a key={key} href={`#${key}`} className={key === page ? 'active' : ''}>{b.tab}</a>
         ))}
-      </ul>
+      </nav>
+      <header>
+        <h1>{book.title}</h1>
+        {isAdmin
+          ? <><span className="badge">{page === 'ru' ? 'Режим редактирования' : 'Режим редагування'}</span>{' '}
+              <button onClick={logout}>{page === 'ru' ? 'Выйти' : 'Вийти'}</button></>
+          : <button onClick={login}>{page === 'ru' ? 'Войти для редактирования' : 'Увійти для редагування'}</button>}
+      </header>
+      <SongBook key={page} list={page} songs={book.songs} locale={book.locale}
+                labels={book.labels} isAdmin={isAdmin} pin={pin} />
     </div>
   );
 }
