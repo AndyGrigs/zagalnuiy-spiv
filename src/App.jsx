@@ -68,6 +68,12 @@ export default function App() {
     }
   };
 
+  const logout = () => {
+    localStorage.removeItem('pin');
+    setPin('');
+    setIsAdmin(false);
+  };
+
   const login = () => {
     const p = prompt('PIN для редагування:');
     if (p) { localStorage.setItem('pin', p); setPin(p); }
@@ -106,7 +112,7 @@ export default function App() {
         <h1>Загальний спів 🎶</h1>
         <p>Обрано пісень: <b>{selected.size}</b></p>
         {isAdmin
-          ? <span className="badge">Режим редагування</span>
+          ? <><span className="badge">Режим редагування</span> <button onClick={logout}>Вийти</button></>
           : <button onClick={login}>Увійти для редагування</button>}
       </header>
 
